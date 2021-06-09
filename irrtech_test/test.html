@@ -2,9 +2,229 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Insert title here</title>
+<title>irrtech_test</title>
+<style type="text/css">
+	div.box{
+		overflow: scroll;
+		height: 400px;
+		border: 1px solid black;
+		padding: 10px;
+	}
+	span.selected{
+		border: 1px solid black;
+		border-radius: 4px;
+	
+	}
+	span.textBold{
+		font-weight: bolder;
+		color: rgb(105, 210, 0);
+	}
+	span.cancelBtn{
+		color:red;
+		float: right;
+		font-weight: bolder;
+		cursor: pointer;
+	}
+	
+	#selectedWords div{
+		border-bottom: 1px solid black;
+		padding: 10px;
+	}
+	
+</style>
+
 </head>
 <body>
+	<h1 align="center">박상원</h1>
+	
+	<div style="padding: 50px;padding-left: 20%;">
+		<div  style="width: 50%;float: left;margin-right: 60px;">
+			<div id="words" class="box">
+				 
+			</div>
+			
+			<div style=" margin-top: 20px;">
+				<button onclick="rollBack();">실행취소</button>
+				<button onclick="rerun()">재실행</button>
+				<button style="float: right;" onclick="addWords()">추가</button>
+			</div>
+		</div>
+		
+		<div id="selectedWords" class="box" style="width: 20%">
 
+		</div>
+	</div>
+	
 </body>
+<script>
+
+window.addEventListener("load",initWords());
+
+var pointer = 0;
+var edditList = new Array();
+var cancelList = new Array();
+
+
+function initWords(){
+	for (var i = 0; i < 10000; i++) {
+		var node = document.createElement("SPAN");
+		node.innerText = getRandomWord();
+		node.setAttribute("id", "word"+i);
+		node.setAttribute("onclick", "clickWord(this)");
+		document.getElementById("words").appendChild(node);
+		
+		var space = document.createElement("SPAN");
+		space.innerText = " ";
+		document.getElementById("words").appendChild(space);
+	}
+}
+
+function getRandomWord(){
+	var alphabet = "abcdefghijklmnopqrstuvwxyz";
+	var str = "";
+	for (var i = 0; i < Math.floor(Math.random() * 9) + 2; i++) {
+		str += alphabet[Math.floor(Math.random() * alphabet.length)];
+	}
+	
+	return str;
+}
+
+function clickWord(word){
+	if(word.classList.contains("textBold")) return;
+	
+	if(word.classList.contains("selected")){
+		word.removeAttribute("class");
+	}else{
+		word.setAttribute("class", "selected");
+	}
+}
+
+function addWords(){
+	var saveList = new Array();
+	var list = document.getElementsByClassName("selected");
+	if(list.length == 0) return;
+	pointChk();
+	
+	for (var i = 0; i < list.length; i++) {
+		saveList.push(list[i].cloneNode());
+		var node = document.createElement("DIV");
+		node.innerText = list[i].innerText;
+		node.setAttribute("id",list[i].id.replace("word","save"));
+		setNode(node);
+
+		document.getElementById("selectedWords").appendChild(node);
+	}
+	
+
+	while(list.length != 0){
+		list[0].setAttribute("class","textBold")
+	}
+	pointer++;
+	edditList.push(saveList);
+}
+
+function cancelWord(word){
+	pointChk();
+	var list = new Array();
+	list.push(word);
+	list.push(getWordIndex(word.id));
+	
+	var i = word.id.replace("save","");
+	document.getElementById("word"+i).removeAttribute("class");
+	word.remove();
+	
+	pointer++;
+	edditList.push(list);
+}
+
+
+function rollBack(){
+	if(pointer == 0) return;
+	saveList();
+	
+	removeSpanClass("selected");
+	var list = edditList[pointer-- -1];
+	
+	if(list[0].id.includes("save")){
+		var selectedList = document.getElementById("selectedWords").children;
+		if(list[1] == selectedList.length) {
+			document.getElementById("selectedWords").appendChild(list[0]);
+		}else{
+			for (var i = 0; i < selectedList.length; i++) {
+				if(i == list[1]){
+					document.getElementById("selectedWords").insertBefore(list[0], selectedList[i]);
+				}
+			}
+		}
+		document.getElementById(list[0].id.replace("save","word")).setAttribute("class","textBold");
+		
+	}else{
+		for (var i = 0; i < list.length; i++) {
+			document.getElementById(list[i].id.replace("word","save")).remove();
+			document.getElementById(list[i].id).removeAttribute("class");
+		}
+	}
+}
+
+function rerun(){
+	if(cancelList.length == 0) return;
+	var list = cancelList.pop();
+	
+	removeSpanClass("selected");
+	removeSpanClass("textBold");
+	document.getElementById("selectedWords").innerHTML = "";
+	for (var i = 0; i < list.length-1; i++) {
+		var node = list[i].cloneNode();
+		node.innerText = document.getElementById(node.id.replace("save","word")).innerText;
+		setNode(node);
+		
+		document.getElementById("selectedWords").appendChild(node);
+		document.getElementById(node.id.replace("save","word")).setAttribute("class","textBold");
+	}
+	
+	
+	pointer = list[list.length-1];
+	
+}
+
+function getWordIndex(wordId){
+	var list = document.getElementById("selectedWords").children;
+	for (var i = 0; i < list.length; i++) {
+		if(list[i].id == wordId) return i;
+	}
+}
+
+function removeSpanClass(className){
+	var removeList = document.getElementsByClassName(className);
+	var cnt = removeList.length;
+	for (var i = cnt-1; i > -1; i--) {
+		removeList[i].removeAttribute("class");
+	}
+}
+
+function saveList(){
+	var addList = new Array();
+	var list = document.getElementById("selectedWords").children;
+	for (var i = 0; i < list.length; i++) {
+		addList.push(list[i].cloneNode());
+	}
+	addList.push(pointer);
+	cancelList.push(addList);
+}
+
+function setNode(node){
+	var cancelBtn = document.createElement("SPAN");
+	cancelBtn.innerText = "X";
+	cancelBtn.setAttribute("class", "cancelBtn");
+	cancelBtn.setAttribute("onclick", "cancelWord(this.parentNode)");
+	node.appendChild(cancelBtn);
+}
+
+function pointChk(){
+	var size = edditList.length;
+	for (var i = 0; i < size-pointer; i++) {
+		edditList.pop();
+	}
+}
+</script>
 </html>
