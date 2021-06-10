@@ -58,13 +58,16 @@
 </body>
 <script>
 
-window.addEventListener("load",initWords());
-
+// 실행 취소를 위한 변수
 var pointer = 0;
 var edditList = new Array();
+
+// 재실행을 위한 변수
 var cancelList = new Array();
 
 
+// 로드 시 좌측 컴포넌트 셋팅
+window.addEventListener("load",initWords());
 function initWords(){
 	for (var i = 0; i < 10000; i++) {
 		var node = document.createElement("SPAN");
@@ -78,17 +81,17 @@ function initWords(){
 		document.getElementById("words").appendChild(space);
 	}
 }
-
+// 임의의 단어는 2~11 사이의 알파벳으로 구현하였습니다.
 function getRandomWord(){
 	var alphabet = "abcdefghijklmnopqrstuvwxyz";
 	var str = "";
 	for (var i = 0; i < Math.floor(Math.random() * 9) + 2; i++) {
 		str += alphabet[Math.floor(Math.random() * alphabet.length)];
 	}
-	
 	return str;
 }
 
+// 좌측컴포넌트에서 단어 선택시 처리입니다.
 function clickWord(word){
 	if(word.classList.contains("textBold")) return;
 	
@@ -99,66 +102,84 @@ function clickWord(word){
 	}
 }
 
+// 좌측에서 단어를 선택하고 추가 버튼을 클릭시 처리 과정입니다.
 function addWords(){
 	var saveList = new Array();
 	var list = document.getElementsByClassName("selected");
 	if(list.length == 0) return;
 	pointChk();
 	
+	// 편집(추가,삭제)이 발생할 때 edditList에 해당 편집에 대한 정보(saveList)를 추가합니다.
+	// 아래는 좌측에 선택한 정보로 우측에 삽입하는 과정입니다.
 	for (var i = 0; i < list.length; i++) {
 		saveList.push(list[i].cloneNode());
 		var node = document.createElement("DIV");
 		node.innerText = list[i].innerText;
 		node.setAttribute("id",list[i].id.replace("word","save"));
-		setNode(node);
+		addCancelNode(node);
 
 		document.getElementById("selectedWords").appendChild(node);
 	}
 	
-
+	// 좌측에 선택되었던 태그들을 돋보이게 처리합니다.
 	while(list.length != 0){
 		list[0].setAttribute("class","textBold")
 	}
+	
 	pointer++;
 	edditList.push(saveList);
 }
 
+//우측에 있는 단어를 삭제하기 위한 함수입니다.
 function cancelWord(word){
 	pointChk();
 	var list = new Array();
 	list.push(word);
 	list.push(getWordIndex(word.id));
 	
-	var i = word.id.replace("save","");
-	document.getElementById("word"+i).removeAttribute("class");
+	document.getElementById(word.id.replace("save","word")).removeAttribute("class");
 	word.remove();
 	
 	pointer++;
 	edditList.push(list);
 }
 
+// 우측에 있는 단어를 삭제 할 때 해당 단어의 순번을 반환하는 함수입니다.
+function getWordIndex(wordId){
+	var list = document.getElementById("selectedWords").children;
+	for (var i = 0; i < list.length; i++) {
+		if(list[i].id == wordId) return i;
+	}
+}
 
+// 실행취소를 위한 함수입니다.
 function rollBack(){
 	if(pointer == 0) return;
 	saveList();
-	
 	removeSpanClass("selected");
+	
+	
 	var list = edditList[pointer-- -1];
 	
-	if(list[0].id.includes("save")){
+	// 단어 삭제를 실행취소하는 경우와 단어 추가를 실행취소하는 방법으로 나눴습니다.
+	if(list[0].id.includes("save")){ // 단어 삭제를 실행취소
 		var selectedList = document.getElementById("selectedWords").children;
 		if(list[1] == selectedList.length) {
+			// 취소했던 단어가 제일 마지막에 있었던 경우 우측에 append
 			document.getElementById("selectedWords").appendChild(list[0]);
 		}else{
+			
+			// 취소했던 단어가 제일 마지막이 아닌 경우 삭제했던 위치에 삽입
 			for (var i = 0; i < selectedList.length; i++) {
 				if(i == list[1]){
 					document.getElementById("selectedWords").insertBefore(list[0], selectedList[i]);
 				}
 			}
 		}
+		// 좌측 단어 강조
 		document.getElementById(list[0].id.replace("save","word")).setAttribute("class","textBold");
-		
-	}else{
+	
+	}else{ // 단어 추가를 실행취소하는 부분
 		for (var i = 0; i < list.length; i++) {
 			document.getElementById(list[i].id.replace("word","save")).remove();
 			document.getElementById(list[i].id).removeAttribute("class");
@@ -166,6 +187,13 @@ function rollBack(){
 	}
 }
 
+/*
+ 재실행을 위한 함수
+ 재실행은 요구사항에서 '실행취소 직전 상태로 변경된다.'라고 정의되어 있어서
+ 실행취소 하기 직전의 상태를 저장하는 형태로 구현하였습니다.
+ 따라서 실행취소를 누를때마다 해당 실행취소의 편집 직전 상태가 저장되어 cancelList에 저장되고
+ 재실행을 누르면 가장 최근에 실행취소 직전 상태로 돌아가게 구현하였습니다.
+ */
 function rerun(){
 	if(cancelList.length == 0) return;
 	var list = cancelList.pop();
@@ -176,7 +204,7 @@ function rerun(){
 	for (var i = 0; i < list.length-1; i++) {
 		var node = list[i].cloneNode();
 		node.innerText = document.getElementById(node.id.replace("save","word")).innerText;
-		setNode(node);
+		addCancelNode(node);
 		
 		document.getElementById("selectedWords").appendChild(node);
 		document.getElementById(node.id.replace("save","word")).setAttribute("class","textBold");
@@ -184,16 +212,9 @@ function rerun(){
 	
 	
 	pointer = list[list.length-1];
-	
 }
 
-function getWordIndex(wordId){
-	var list = document.getElementById("selectedWords").children;
-	for (var i = 0; i < list.length; i++) {
-		if(list[i].id == wordId) return i;
-	}
-}
-
+// 실행취소나 재실행 시 선택되었던 단어들을 비활성화 시키기 위해 만들었습니다.(클래스 제거)
 function removeSpanClass(className){
 	var removeList = document.getElementsByClassName(className);
 	var cnt = removeList.length;
@@ -202,6 +223,7 @@ function removeSpanClass(className){
 	}
 }
 
+// 실행취소를 할 때, 재실행을 위해 현재 우측 단어들의 정보를 cancelList에 저장합니다.
 function saveList(){
 	var addList = new Array();
 	var list = document.getElementById("selectedWords").children;
@@ -212,7 +234,8 @@ function saveList(){
 	cancelList.push(addList);
 }
 
-function setNode(node){
+// 단어에 x버튼을 추가해주는 함수입니다.
+function addCancelNode(node){
 	var cancelBtn = document.createElement("SPAN");
 	cancelBtn.innerText = "X";
 	cancelBtn.setAttribute("class", "cancelBtn");
@@ -220,6 +243,7 @@ function setNode(node){
 	node.appendChild(cancelBtn);
 }
 
+// 재실행을 하고 나서 편집(단어 추가, 삭제)이 이루어질때 현재 편집 상태 이후의 편집점을 제거하는 함수입니다.
 function pointChk(){
 	var size = edditList.length;
 	for (var i = 0; i < size-pointer; i++) {
